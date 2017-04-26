@@ -1,0 +1,10 @@
+{
+  "name": "vue-upload",
+  "version": "1.0.0",
+  "description": "file uploader",
+  "main": "src/upload.vue",
+  "scripts": {
+  },
+  "author": "Franck FREIBURGER",
+  "license": "MIT"
+}
