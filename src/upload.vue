@@ -19,6 +19,7 @@
 		width: 10em;
 		height: 5em;
 	}
+	
 	form,
 	iframe {
 		display: none;
@@ -163,6 +164,9 @@ module.exports = {
 			this.$once('cancel', cancel);
 		},
 		enter: function(ev) {
+			
+			if ( this.uploading && !this.multiple )
+				return;
 
 			if ( this.hasFileAPI ) {
 				
@@ -174,15 +178,24 @@ module.exports = {
 		},
 		leave: function(ev) {
 
+			if ( this.uploading && !this.multiple )
+				return;
+
 			if ( this.hasFileAPI )
 				this.dropState = '';
 		},
 		over: function(ev) {
+
+			if ( this.uploading && !this.multiple )
+				return;
 			
 			if ( this.hasFileAPI )
 				ev.dataTransfer.dropEffect = (this.dropState === 'denied' ? 'none' : '');
 		},
 		drop: function(ev) {
+
+			if ( this.uploading && !this.multiple )
+				return;
 
 			if ( this.hasFileAPI ) {
 				
