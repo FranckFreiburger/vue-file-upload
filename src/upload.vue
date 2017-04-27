@@ -1,15 +1,13 @@
 <template>
 	<div class="root" :class="dropState ? 'drop_'+dropState : ''">
-		<form :target="_uid+'ifr'" :action="url" method="post" enctype="multipart/form-data">
-			<input :id="_uid" name="file" type="file" accept="image/*;capture=camera" @change="onchange" :multiple="multiple">
+		<form :target="ifrList[0]" :action="url" method="post" enctype="multipart/form-data">
+			<input :id="'inp'+_uid" name="file" type="file" accept="image/*;capture=camera" @change="onchange" :multiple="multiple">
 		</form>
-		<iframe v-if="uploading && !hasFileAPI" :name="_uid+'ifr'" src="about:blank" @load="onload"></iframe>
-		
-		<label :for="uploading ? '' : _uid" @dragenter.prevent.stop="enter" @dragleave.prevent.stop="leave" @dragover.prevent.stop="over" @drop.prevent.stop="drop"></label>
-
+	 	<iframe v-for="name in ifrList" :key="name" :name="name" src="about:blank" @load="onload($event.currentTarget, name)"></iframe>
+		<label :for="!uploading || multiple ? 'inp'+_uid : ''" @dragenter.prevent.stop="enter" @dragleave.prevent.stop="leave" @dragover.prevent.stop="over" @drop.prevent.stop="drop"></label>
 		<div v-show="uploading" class="progressBar">
 			<div class="progress" :style="{width: progress*100+'%'}"></div>
-			<a href="#" class="cancel" @click="cancel"></a>
+			<a href="#" class="cancel" @click.prevent="cancel"></a>
 		</div>
 	</div>
 </template>
@@ -90,6 +88,8 @@
 
 function hasFileAPI() {
 	
+	return false;
+	
 	return window.FileReader && window.FormData;
 }
 
@@ -107,6 +107,17 @@ function hasDataTransferFileSupport(dataTransfer) {
 }
 
 module.exports = {
+	components: {
+		ifr: {
+			methods: {
+				onload: function(iframeElt, name) {
+
+					if ( !isIFrameInitState(iframeElt) )
+						this.$emit('ifrLoaded', name);
+				}
+			}
+		}
+	},
 	props: {
 		url: {
 			type: String,
@@ -123,6 +134,8 @@ module.exports = {
 			dropState: '',
 			uploading: false,
 			progress: 0,
+			ifrList: [],
+			ifrId: 1,
 		}
 	},
 	
@@ -212,8 +225,9 @@ module.exports = {
 			} else {
 			
 				this.$nextTick(function() {
-					
-					this.inputElt.click();
+
+					var inputElt = document.getElementById(ev.target.htmlFor);
+					inputElt.click();
 				});
 			}
 		},
@@ -227,28 +241,36 @@ module.exports = {
 			} else {
 				
 				this.progress = 0.5;
+				
+				this.ifrId++;
+				this.ifrList.unshift(this._uid+'ifr'+this.ifrId);
 
 				this.$nextTick(function() {
-
-					this.formElt.submit();
+					
+					var formElt = ev.target.form;
+					formElt.submit();
 					
 					this.$nextTick(function() {
 					
-						this.formElt.reset();
+						formElt.reset();
 					});
 					
 				});
 			}
 		},
-		onload: function(ev) {
-			
-			if ( isIFrameInitState(ev.currentTarget) )
+		
+		onload: function(iframeElt, name) {
+
+			if ( isIFrameInitState(iframeElt) )
 				return;
-			this.uploaded();
+			this.ifrList.splice(this.ifrList.indexOf(name), 1);
 		},
+		
 		cancel: function() {
 			
 			this.$emit('cancel');
+			
+			this.ifrList.splice(0, this.ifrList.length);
 			this.uploading = false;
 		},
 		clearDropState: function() {
@@ -258,15 +280,6 @@ module.exports = {
 				this.dropState = '';
 			}.bind(this), 500);
 		}
-	},
-	mounted: function() {
-
-		this.formElt = this.$el.firstElementChild;
-		this.inputElt = this.$el.firstElementChild.firstElementChild;
-		
-		this.cancelable = [];
-	},
-	destroyed: function() {
 	}
 }
 
