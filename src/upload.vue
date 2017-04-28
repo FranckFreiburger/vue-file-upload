@@ -1,20 +1,20 @@
 <template>
 	<div class="root" :class="dropState ? 'drop_'+dropState : ''">
-		<form :target="ifrList[0]" :action="url" method="post" enctype="multipart/form-data">
-			<input :id="'inp'+_uid" name="file" type="file" accept="image/*;capture=camera" @change="onchange" :multiple="multiple">
+		<form :target="uploads[0] && uploads[0].ifr" :action="url" method="post" enctype="multipart/form-data">
+			<input :id="'inp'+_uid" name="file" type="file" accept="image/*" capture @change="onchange" :multiple="multiple">
 		</form>
-	 	<iframe v-for="name in ifrList" :key="name" :name="name" src="about:blank" @load="onload($event.currentTarget, name)"></iframe>
-		<label :for="!uploading || multiple ? 'inp'+_uid : ''" @dragenter.prevent.stop="enter" @dragleave.prevent.stop="leave" @dragover.prevent.stop="over" @drop.prevent.stop="drop"></label>
-		<div v-show="uploading" class="progressBar">
-			<div class="progress" :style="{width: progress*100+'%'}"></div>
-			<a href="#" class="cancel" @click.prevent="cancel"></a>
+	 	<iframe v-for="item in uploads" v-if="item.ifr" :key="item.ifr" :name="item.ifr" src="about:blank" @load="onload($event.target, item.ifr)"></iframe>
+		<label :for="!uploads.length || multiple ? 'inp'+_uid : ''" @dragenter.prevent.stop="enter" @dragleave.prevent.stop="leave" @dragover.prevent.stop="over" @drop.prevent.stop="drop" :title="uploadInfo"></label>
+		<div v-show="uploads.length" class="progressBar">
+			<div class="progress" :style="progressStyle"></div>
+			<a href="#" class="cancel" @click.prevent="free"></a>
 		</div>
 	</div>
 </template>
 <style scoped>
 	.root {
 		position: relative;
-		width: 10em;
+		width: 5em;
 		height: 5em;
 	}
 	
@@ -53,6 +53,19 @@
 		border-color: red;
 	}
 	
+	label:after {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		width: 1em;
+		height: 1em;
+		margin: -0.5em 0 0 -0.5em;
+		content: '\2713';
+		font-weight: bold;
+		font-size: 200%;
+		color: green;
+	}
+	
 	.progressBar {
 		position: absolute;
 		height: 0.75em;
@@ -86,12 +99,9 @@
 <script>
 "use strict";
 
-function hasFileAPI() {
-	
-	return false;
-	
-	return window.FileReader && window.FormData;
-}
+var hasFileAPI = window.FileReader && window.FormData;
+
+//hasFileAPI = false
 
 function isIFrameInitState(iframeElt) {
 	
@@ -107,17 +117,7 @@ function hasDataTransferFileSupport(dataTransfer) {
 }
 
 module.exports = {
-	components: {
-		ifr: {
-			methods: {
-				onload: function(iframeElt, name) {
 
-					if ( !isIFrameInitState(iframeElt) )
-						this.$emit('ifrLoaded', name);
-				}
-			}
-		}
-	},
 	props: {
 		url: {
 			type: String,
@@ -130,32 +130,74 @@ module.exports = {
 	},
 	data: function() {
 		return {
-			hasFileAPI: hasFileAPI(), //  false,// 
 			dropState: '',
-			uploading: false,
-			progress: 0,
-			ifrList: [],
-			ifrId: 1,
+			uploads: [],
+			total: 0,
+			loaded: 0,
+			count: 0,
+		}
+	},
+	
+	computed: {
+		uploadInfo: function() {
+			
+			var filenameList = [];
+			for ( var i = 0; i < this.uploads.length; ++i )
+				Array.prototype.push.apply(filenameList, this.uploads[i].filenameList);
+			return filenameList.join('\n');
+		},
+		progressStyle: function() {
+			
+			var loadedRatio = this.loaded/this.total;
+			if ( isNaN(loadedRatio) ) {
+				
+				return { width: '50%', marginLeft: (50 - Math.abs(this.countNext() % 50*2 - 50)  ) +'%' };
+			} else {
+				
+				return { width: loadedRatio*100+'%' };
+			}
+		},
+	},
+	
+	watch: {
+		'uploads.length': function(length) {
+			
+			if ( length > 0 )
+				return;
+			this.loaded = 0;
+			this.total = 0;
 		}
 	},
 	
 	methods: {
+		countNext: function() {
+
+			setTimeout(function() {
+			
+				this.count++;
+			}.bind(this), 250);
+			return this.count;
+		},
 		uploaded: function(status) {
 			
-			this.uploading = false;
 		},
-		uploadFile: function(file) {
+		uploadFile: function(files) {
 			
 			var xhr = new XMLHttpRequest();
-			
-			var cancel = function() {
 
-				xhr.abort();
-			};
+			var info = {
+				free: xhr.abort.bind(xhr), // will trigger onreadystatechange
+				filenameList: [],
+			}
+			this.uploads.push(info);
+			var prevLoadedBytes = 0;
 			
-			xhr.upload.onprogress = function(e) {
+			xhr.upload.onprogress = function(ev) {
 				
-				this.progress = e.lengthComputable ? e.loaded / e.total : 0.5;
+				if ( !ev.lengthComputable )
+					return;
+				this.loaded += ev.loaded - prevLoadedBytes;
+				prevLoadedBytes = ev.loaded;
 			}.bind(this);
 
 			xhr.onreadystatechange = function() {
@@ -164,24 +206,29 @@ module.exports = {
 					return;
 				xhr.onreadystatechange = null;
 				xhr.upload.onprogress = null;
-				this.$off('cancel', cancel);
+				
+				this.uploads.splice(this.uploads.indexOf(info), 1);
 				
 				this.uploaded(xhr.status); // xhr.responseText
 			}.bind(this);
 			xhr.open('POST', this.url, true);
 			
 			var fd = new FormData();
-			fd.append('file', file);
-			xhr.send(fd);
 			
-			this.$once('cancel', cancel);
+			for ( var i = 0; i < files.length; ++i ) {
+				
+				info.filenameList.push(files[i].name);
+				this.total += files[i].size;
+				fd.append('file', files[i]);
+			}
+			xhr.send(fd);
 		},
 		enter: function(ev) {
 			
-			if ( this.uploading && !this.multiple )
+			if ( this.uploads.length && !this.multiple )
 				return;
 
-			if ( this.hasFileAPI ) {
+			if ( hasFileAPI ) {
 				
 				if ( ('items' in ev.dataTransfer) && ev.dataTransfer.items.length > 1 && !this.multiple )
 					this.dropState = 'denied';
@@ -191,70 +238,68 @@ module.exports = {
 		},
 		leave: function(ev) {
 
-			if ( this.uploading && !this.multiple )
-				return;
-
-			if ( this.hasFileAPI )
-				this.dropState = '';
+			this.dropState = '';
 		},
 		over: function(ev) {
 
-			if ( this.uploading && !this.multiple )
+			if ( this.uploads.length && !this.multiple )
 				return;
 			
-			if ( this.hasFileAPI )
+			if ( hasFileAPI )
 				ev.dataTransfer.dropEffect = (this.dropState === 'denied' ? 'none' : '');
 		},
 		drop: function(ev) {
 
-			if ( this.uploading && !this.multiple )
+			if ( this.uploads.length && !this.multiple )
 				return;
 
-			if ( this.hasFileAPI ) {
+			if ( hasFileAPI ) {
 				
 				this.clearDropState();
 				
-				if ( ev.dataTransfer.files.length === 0 || ev.dataTransfer.files.length > 1 && !this.multiple ) {
-					
+				if ( ev.dataTransfer.files.length === 0 || ev.dataTransfer.files.length > 1 && !this.multiple )
 					this.dropState = 'denied';
-				} else {
-					
-					this.uploadFile(ev.dataTransfer.files[0]);
-					this.uploading = true;
-				}
+				else
+					this.uploadFile(ev.dataTransfer.files);
 			} else {
 			
 				this.$nextTick(function() {
 
-					var inputElt = document.getElementById(ev.target.htmlFor);
-					inputElt.click();
+					if ( ev.target.htmlFor )
+						document.getElementById(ev.target.htmlFor).click();
 				});
 			}
 		},
 		onchange: function(ev) {
 			
-			this.uploading = true;
-			
-			if ( this.hasFileAPI ) {
+			var formElt = ev.target.form;
+			if ( hasFileAPI ) {
 				
-				this.uploadFile(ev.currentTarget.files[0]);
+				this.uploadFile(ev.target.files);
+				formElt.reset();
 			} else {
 				
-				this.progress = 0.5;
+				this.total = NaN;
+				var name = this._uid+'ifr'+Date.now();
 				
-				this.ifrId++;
-				this.ifrList.unshift(this._uid+'ifr'+this.ifrId);
+				this.uploads.unshift({
+					ifr: name,
+					free: function() {
+			
+						for ( var i = 0; i < this.uploads.length; ++i )
+							if ( this.uploads[i].ifr === name )
+								return this.uploads.splice(i, 1);
+					}.bind(this),
+					filenameList: [ev.target.value.match(/[^\/\\]*$/)[0]],
+				});
 
 				this.$nextTick(function() {
 					
-					var formElt = ev.target.form;
 					formElt.submit();
-					
 					this.$nextTick(function() {
 					
 						formElt.reset();
 					});
-					
 				});
 			}
 		},
@@ -263,15 +308,16 @@ module.exports = {
 
 			if ( isIFrameInitState(iframeElt) )
 				return;
-			this.ifrList.splice(this.ifrList.indexOf(name), 1);
+			
+			for ( var i = 0; i < this.uploads.length; ++i )
+				if ( this.uploads[i].ifr === name )
+					return this.uploads[i].free();
 		},
 		
-		cancel: function() {
+		free: function() {
 			
-			this.$emit('cancel');
-			
-			this.ifrList.splice(0, this.ifrList.length);
-			this.uploading = false;
+			for ( var i = this.uploads.length-1; i >= 0 ; --i )
+				this.uploads[i].free();
 		},
 		clearDropState: function() {
 			
