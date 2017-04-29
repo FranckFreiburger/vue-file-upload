@@ -1,9 +1,10 @@
 <template>
-	<div class="root" :class="dropState ? 'drop_'+dropState : ''">
-		<form :target="uploads[0] && uploads[0].ifr" :action="url" method="post" enctype="multipart/form-data">
-			<input :id="'inp'+_uid" name="file" type="file" accept="image/*" capture @change="onchange" :multiple="multiple">
+	<div class="root" :class="[dropState, uploadState]">
+		<form :target="uploads.length && uploads[0].ifr" :action="url" method="post" enctype="multipart/form-data">
+			<input :id="'inp'+_uid" name="file" type="file" :accept="image ? 'image/*' : undefined" :capture="capture" @change="onchange" :multiple="multiple">
 		</form>
 	 	<iframe v-for="item in uploads" v-if="item.ifr" :key="item.ifr" :name="item.ifr" src="about:blank" @load="onload($event.target, item.ifr)"></iframe>
+	 	<div class="notice"></div>
 		<label :for="!uploads.length || multiple ? 'inp'+_uid : ''" @dragenter.prevent.stop="enter" @dragleave.prevent.stop="leave" @dragover.prevent.stop="over" @drop.prevent.stop="drop" :title="uploadInfo"></label>
 		<div v-show="uploads.length" class="progressBar">
 			<div class="progress" :style="progressStyle"></div>
@@ -14,66 +15,85 @@
 <style scoped>
 	.root {
 		position: relative;
-		width: 5em;
-		height: 5em;
+		display: inline-block;
+		min-width: 5em;
+		min-height: 5em;
+		background-color: #eee;
+		font-family: arial;
 	}
 	
 	form,
 	iframe {
 		display: none;
 	}
-
-	label {
+	
+	label,
+	label:before,
+	.notice {
 		position: absolute;
 		top: 0;
 		right: 0;
 		bottom: 0;
 		left: 0;
-		background-color: #eee;
+	}
+
+	label {
 		cursor: pointer;
 	}
 	
 	label:before {
 		content: '';
-		position: absolute;
-		top: 0;
-		right: 0;
-		bottom: 0;
-		left: 0;
-		
 		margin: 0.5em;
 		border: 0.25em dotted silver;
 	}
 	
-	.drop_allowed label:before {
+	.dropAllowed label:before {
 		border-color: green;
 	}
 
-	.drop_denied label:before {
+	.dropDenied label:before {
 		border-color: red;
 	}
-	
-	label:after {
+
+	.notice {
+		visibility: hidden;
+
 		position: absolute;
 		top: 50%;
 		left: 50%;
-		width: 1em;
-		height: 1em;
-		margin: -0.5em 0 0 -0.5em;
-		content: '\2713';
+		width: 100%;
+		height: 100%;
 		font-weight: bold;
-		font-size: 200%;
+		font-size: 250%;
+		margin: -0.7em 0 0 -0.4em;
+		transition: opacity 1s;
+	}
+
+	.uploadSuccess .notice,
+	.uploadFailure .notice {
+		visibility: visible;
+		opacity: 0;
+	}
+	
+	.uploadSuccess .notice:before {
 		color: green;
+		content: '\2713';
+	}
+
+	.uploadFailure .notice:before {
+		color: red;
+		content: '\2717';
 	}
 	
 	.progressBar {
 		position: absolute;
-		height: 0.75em;
-		top: 60%;
 		left: 1em;
+		bottom: 1em;
 		right: 1em;
+		height: 1em;
 		background-color: silver;
 	}
+	
 	.progress {
 		height: 100%;
 		background-color: grey;
@@ -81,10 +101,11 @@
 	
 	.cancel {
 		position: absolute;
+		top: 50%;
+		margin-top: -0.6em;
+		height: 100%;
 		right: 0;
-		top: -0.25em;
-		
-		font-family: arial;
+
 		font-weight: bold;
 		color: red;
 		text-decoration: none;
@@ -92,7 +113,7 @@
 	}
 	
 	.cancel:before {
-		content: '\02A2F'; /* &cross; */
+		content: '\00A0x\00A0';
 	}
 	
 </style>
@@ -103,21 +124,25 @@ var hasFileAPI = window.FileReader && window.FormData;
 
 //hasFileAPI = false
 
-function isIFrameInitState(iframeElt) {
+function isIFrameWindow(iframeElt) {
 	
 	try {
-		return iframeElt.contentDocument.location.href === 'about:blank';
+		return iframeElt.contentWindow;
 	} catch(ex) {}
-	return false;
+	return null;
 }
 
 function hasDataTransferFileSupport(dataTransfer) {
 	
-	return dataTransfer.types !== undefined && Array.prototype.slice.call(dataTransfer.types).indexOf('Files') !== -1;
+	if ( !('types' in dataTransfer) )
+		return false;
+	for ( var i = 0; i < dataTransfer.types.length; ++i )
+		if ( dataTransfer.types[i] === 'Files' )
+			return true;
+	return false;
 }
 
 module.exports = {
-
 	props: {
 		url: {
 			type: String,
@@ -126,15 +151,32 @@ module.exports = {
 		multiple: {
 			type: Boolean,
 			default: false,
+		},
+		image: {
+			type: Boolean,
+			default: false,
+		},
+		capture: {
+			type: Boolean,
+			default: false,
+		},
+		check: {
+			type: Function,
+			default: function() { return true },
+		},
+		done: {
+			type: Function,
+			default: function(status, responseText, feedback) { status !== undefined && feedback(status >= 200 && status < 400) },
 		}
 	},
 	data: function() {
 		return {
 			dropState: '',
+			uploadState: '',
 			uploads: [],
 			total: 0,
 			loaded: 0,
-			count: 0,
+			tick: 0,
 		}
 	},
 	
@@ -144,25 +186,25 @@ module.exports = {
 			var filenameList = [];
 			for ( var i = 0; i < this.uploads.length; ++i )
 				Array.prototype.push.apply(filenameList, this.uploads[i].filenameList);
-			return filenameList.join('\n');
+			return filenameList.map(function(item) { return '\u2022 ' + item }).join('\n');
 		},
 		progressStyle: function() {
 			
-			var loadedRatio = this.loaded/this.total;
-			if ( isNaN(loadedRatio) ) {
-				
-				return { width: '50%', marginLeft: (50 - Math.abs(this.countNext() % 50*2 - 50)  ) +'%' };
-			} else {
-				
+			if ( this.uploads.length === 0 )
+				return undefined;
+			
+			var loadedRatio = this.loaded / this.total;
+			if ( isNaN(loadedRatio) )
+				return { width: '50%', marginLeft: (50 - Math.abs(this.tickNext() % 50*2 - 50))+'%' };
+			else
 				return { width: loadedRatio*100+'%' };
-			}
 		},
 	},
 	
 	watch: {
 		'uploads.length': function(length) {
 			
-			if ( length > 0 )
+			if ( length === 0 )
 				return;
 			this.loaded = 0;
 			this.total = 0;
@@ -170,28 +212,46 @@ module.exports = {
 	},
 	
 	methods: {
-		countNext: function() {
+		tickNext: function() {
 
 			setTimeout(function() {
 			
-				this.count++;
+				this.tick++;
 			}.bind(this), 250);
-			return this.count;
+			return this.tick;
 		},
-		uploaded: function(status) {
+		
+		uploaded: function(status, responseText) {
 			
+			var feedback = function(success) {
+			
+				this.uploadState = success ? 'uploadSuccess' : 'uploadFailure';
+				setTimeout(function() {
+				
+					this.uploadState = '';
+				}.bind(this), 1000);
+			}.bind(this);
+			
+			this.done(status, responseText, feedback);
 		},
 		uploadFile: function(files) {
 			
 			var xhr = new XMLHttpRequest();
 
 			var info = {
-				free: xhr.abort.bind(xhr), // will trigger onreadystatechange
+				free: function() {
+					
+					xhr.onreadystatechange = null;
+					xhr.upload.onprogress = null;
+					if ( xhr.readyState !== 4 )
+						xhr.abort();
+					this.uploads.splice(this.uploads.indexOf(info), 1);
+				}.bind(this),
 				filenameList: [],
 			}
 			this.uploads.push(info);
-			var prevLoadedBytes = 0;
 			
+			var prevLoadedBytes = 0;
 			xhr.upload.onprogress = function(ev) {
 				
 				if ( !ev.lengthComputable )
@@ -204,17 +264,12 @@ module.exports = {
 				
 				if ( xhr.readyState !== 4 )
 					return;
-				xhr.onreadystatechange = null;
-				xhr.upload.onprogress = null;
-				
-				this.uploads.splice(this.uploads.indexOf(info), 1);
-				
-				this.uploaded(xhr.status); // xhr.responseText
+				info.free();
+				this.uploaded(xhr.status, xhr.responseText);
 			}.bind(this);
 			xhr.open('POST', this.url, true);
 			
 			var fd = new FormData();
-			
 			for ( var i = 0; i < files.length; ++i ) {
 				
 				info.filenameList.push(files[i].name);
@@ -225,15 +280,18 @@ module.exports = {
 		},
 		enter: function(ev) {
 			
-			if ( this.uploads.length && !this.multiple )
+			if ( this.uploads.length && !this.multiple ) {
+				
+				this.dropState = 'dropDenied';
 				return;
+			}
 
-			if ( hasFileAPI ) {
+			if ( hasFileAPI && hasDataTransferFileSupport(ev.dataTransfer) ) {
 				
 				if ( ('items' in ev.dataTransfer) && ev.dataTransfer.items.length > 1 && !this.multiple )
-					this.dropState = 'denied';
+					this.dropState = 'dropDenied';
 				else
-					this.dropState = 'allowed';
+					this.dropState = 'dropAllowed';
 			}
 		},
 		leave: function(ev) {
@@ -242,25 +300,50 @@ module.exports = {
 		},
 		over: function(ev) {
 
-			if ( this.uploads.length && !this.multiple )
+			if ( this.uploads.length && !this.multiple ) {
+				
+				this.dropState = 'dropDenied';
 				return;
+			}
 			
-			if ( hasFileAPI )
-				ev.dataTransfer.dropEffect = (this.dropState === 'denied' ? 'none' : '');
+			if ( hasFileAPI && hasDataTransferFileSupport(ev.dataTransfer) )
+				ev.dataTransfer.dropEffect = (this.dropState === 'dropDenied' ? 'none' : '');
 		},
+		
 		drop: function(ev) {
+			
+			window.setTimeout(function() {
+			
+				this.dropState = '';
+			}.bind(this), 500);
 
-			if ( this.uploads.length && !this.multiple )
+			if ( this.uploads.length && !this.multiple ) {
+				
+				this.dropState = 'dropDenied';
 				return;
+			}
 
-			if ( hasFileAPI ) {
+			if ( hasFileAPI && hasDataTransferFileSupport(ev.dataTransfer) ) {
 				
-				this.clearDropState();
+				var files = Array.prototype.slice.call(ev.dataTransfer.files);
+				var acceptFiles = !files.some(function(file) {
+					
+					return !this.check(file.name);
+				}.bind(this));
 				
-				if ( ev.dataTransfer.files.length === 0 || ev.dataTransfer.files.length > 1 && !this.multiple )
-					this.dropState = 'denied';
-				else
+				if ( !acceptFiles ) {
+					
+					this.dropState = 'dropDenied';
+					return;
+				}
+				
+				if ( ev.dataTransfer.files.length === 0 || ev.dataTransfer.files.length > 1 && !this.multiple ) {
+				
+					this.dropState = 'dropDenied';
+				} else {
+					
 					this.uploadFile(ev.dataTransfer.files);
+				}
 			} else {
 			
 				this.$nextTick(function() {
@@ -273,14 +356,28 @@ module.exports = {
 		onchange: function(ev) {
 			
 			var formElt = ev.target.form;
-			if ( hasFileAPI ) {
+			if ( hasFileAPI && 'files' in ev.target ) {
 				
 				this.uploadFile(ev.target.files);
 				formElt.reset();
 			} else {
 				
-				this.total = NaN;
+				this.total += NaN;
 				var name = this._uid+'ifr'+Date.now();
+
+				var filename = ev.target.value.match(/[^\/\\]*$/)[0];
+				if ( !this.check(filename) ) {
+					
+					formElt.reset();
+					this.dropState = 'dropDenied';
+					
+					window.setTimeout(function() {
+					
+						this.dropState = '';
+					}.bind(this), 500);
+					
+					return;
+				}
 				
 				this.uploads.unshift({
 					ifr: name,
@@ -288,9 +385,9 @@ module.exports = {
 			
 						for ( var i = 0; i < this.uploads.length; ++i )
 							if ( this.uploads[i].ifr === name )
-								return this.uploads.splice(i, 1);
+								this.uploads.splice(i, 1);
 					}.bind(this),
-					filenameList: [ev.target.value.match(/[^\/\\]*$/)[0]],
+					filenameList: [filename],
 				});
 
 				this.$nextTick(function() {
@@ -305,26 +402,22 @@ module.exports = {
 		},
 		
 		onload: function(iframeElt, name) {
-
-			if ( isIFrameInitState(iframeElt) )
+			
+			var iframeWin = isIFrameWindow(iframeElt);
+			if ( iframeWin !== null && iframeWin.document.location.href === 'about:blank' )
 				return;
 			
 			for ( var i = 0; i < this.uploads.length; ++i )
 				if ( this.uploads[i].ifr === name )
-					return this.uploads[i].free();
+					this.uploads[i].free();
+				
+			this.uploaded(undefined, iframeWin !== null ? iframeWin.document.documentElement.innerText : '');
 		},
 		
 		free: function() {
 			
 			for ( var i = this.uploads.length-1; i >= 0 ; --i )
 				this.uploads[i].free();
-		},
-		clearDropState: function() {
-			
-			window.setTimeout(function() {
-				
-				this.dropState = '';
-			}.bind(this), 500);
 		}
 	}
 }
