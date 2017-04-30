@@ -1,5 +1,5 @@
 # vue-file-upload
-File upload widget
+File upload component
 
 * drag and drop / file chooser
 * multiple file (except for IE9)
@@ -72,7 +72,7 @@ By default, if the property is not defined, a positive feedback is send for HTTP
 
 #### default slot
 
-This slot is included at the center of the widget.
+This slot is included at the center of the component.
 exemple:
 ```
 <upload url='/upload' image capture><i class="fa fa-camera fa-2x"></i></upload>
