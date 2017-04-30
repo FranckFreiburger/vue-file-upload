@@ -75,8 +75,9 @@ By default, if the property is not defined, a positive feedback is send for HTTP
 This slot is included at the center of the widget.
 exemple:
 ```
-<upload url='/upload' image capture><i class="fa fa-camera" aria-hidden="true"></i></upload>
+<upload url='/upload' image capture><i class="fa fa-camera fa-2x"></i></upload>
 ```
+![using default slot](https://cloud.githubusercontent.com/assets/25509586/25568109/39c755a0-2dfc-11e7-8bae-3a3be2e483ac.png)
 
 
 ## Credits
