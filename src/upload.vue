@@ -29,7 +29,6 @@
 		min-width: 5em;
 		min-height: 5em;
 		background-color: #eee;
-		font-family: arial;
 	}
 	
 	form,
@@ -75,6 +74,7 @@
 	}
 
 	.notice {
+		font-family: arial;
 		font-weight: bold;
 		font-size: 250%;
 	}
@@ -118,6 +118,7 @@
 		height: 100%;
 		right: 0;
 
+		font-family: arial;
 		font-weight: bold;
 		color: red;
 		text-decoration: none;
@@ -216,7 +217,7 @@ module.exports = {
 	watch: {
 		'uploads.length': function(length) {
 			
-			if ( length === 0 )
+			if ( length !== 0 )
 				return;
 			this.loaded = 0;
 			this.total = 0;
