@@ -1,4 +1,4 @@
-# vue-upload
+# vue-file-upload
 File upload widget
 
 * drag and drop / file chooser
