@@ -72,6 +72,11 @@
 	.dropDenied.root:before {
 		border-color: red;
 	}
+	
+	.dropUndefined.root:before {
+		border-color: grey;
+	}
+	
 
 	.notice {
 		font-family: arial;
@@ -82,6 +87,7 @@
 	.uploadSuccess .notice,
 	.uploadFailure .notice {
 		animation-duration: 1s;
+		animation-fill-mode: forwards;
 		animation-name: notice;
 	}
 	
@@ -94,9 +100,7 @@
 		color: red;
 		content: '\2717';
 	}
-	
-	
-	
+
 	.progressBar {
 		position: absolute;
 		left: 1em;
@@ -173,9 +177,9 @@ module.exports = {
 			type: Boolean,
 			default: false,
 		},
-		check: {
+		accept: {
 			type: Function,
-			default: function() { return true },
+			default: function(filename) { return true },
 		},
 		done: {
 			type: Function,
@@ -305,6 +309,9 @@ module.exports = {
 					this.dropState = 'dropDenied';
 				else
 					this.dropState = 'dropAllowed';
+			} else {
+				
+				this.dropState = 'dropUndefined';
 			}
 		},
 		leave: function(ev) {
@@ -313,12 +320,6 @@ module.exports = {
 		},
 		over: function(ev) {
 
-			if ( this.uploads.length && !this.multiple ) {
-				
-				this.dropState = 'dropDenied';
-				return;
-			}
-			
 			if ( hasFileAPI && hasDataTransferFileSupport(ev.dataTransfer) )
 				ev.dataTransfer.dropEffect = (this.dropState === 'dropDenied' ? 'none' : '');
 		},
@@ -341,7 +342,7 @@ module.exports = {
 				var files = Array.prototype.slice.call(ev.dataTransfer.files);
 				var acceptFiles = !files.some(function(file) {
 					
-					return !this.check(file.name);
+					return !this.accept(file.name);
 				}.bind(this));
 				
 				if ( !acceptFiles ) {
@@ -379,7 +380,7 @@ module.exports = {
 				var name = this._uid+'ifr'+Date.now();
 
 				var filename = ev.target.value.match(/[^\/\\]*$/)[0];
-				if ( !this.check(filename) ) {
+				if ( !this.accept(filename) ) {
 					
 					formElt.reset();
 					this.dropState = 'dropDenied';
