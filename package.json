@@ -1,5 +1,5 @@
 {
-  "name": "@FranckFreiburger/vue-file-upload",
+  "name": "@franck.freiburger/vue-file-upload",
   "version": "1.0.0",
   "description": "file upload widget",
   "main": "src/upload.vue",

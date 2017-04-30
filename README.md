@@ -21,6 +21,11 @@ Same browser support as [Vue.js 2](https://github.com/vuejs/vue/blob/dev/README.
 </template>
 ```
 
+## Install
+```
+npm install --save @franck.freiburger/vue-file-upload
+```
+
 ## API
 
 ### Properties
