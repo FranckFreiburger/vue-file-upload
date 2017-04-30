@@ -4,6 +4,7 @@
 			<input :id="'inp'+_uid" name="file" type="file" :accept="image ? 'image/*' : undefined" :capture="capture" @change="onchange" :multiple="multiple">
 		</form>
 	 	<iframe v-for="item in uploads" v-if="item.ifr" :key="item.ifr" :name="item.ifr" src="about:blank" @load="onload($event.target, item.ifr)"></iframe>
+	 	<div v-if="$slots.default" class="slot"><slot></slot></div>
 	 	<div class="notice"></div>
 		<label :for="!uploads.length || multiple ? 'inp'+_uid : ''" @dragenter.prevent.stop="enter" @dragleave.prevent.stop="leave" @dragover.prevent.stop="over" @drop.prevent.stop="drop" :title="uploadInfo"></label>
 		<div v-show="uploads.length" class="progressBar">
@@ -13,6 +14,15 @@
 	</div>
 </template>
 <style scoped>
+
+	@keyframes notice {
+		from {
+			opacity: 1;
+		}
+		to {
+			opacity: 0;
+		}
+	}
 	.root {
 		position: relative;
 		display: inline-block;
@@ -27,52 +37,52 @@
 		display: none;
 	}
 	
+	.notice,
+	.slot {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+	}
+	
 	label,
-	label:before,
-	.notice {
+	.root:before {
 		position: absolute;
 		top: 0;
 		right: 0;
 		bottom: 0;
 		left: 0;
 	}
-
+	
 	label {
+		background-color: #000;
+		opacity: 0;
 		cursor: pointer;
 	}
 	
-	label:before {
+	.root:before {
 		content: '';
 		margin: 0.5em;
 		border: 0.25em dotted silver;
 	}
 	
-	.dropAllowed label:before {
+	.dropAllowed.root:before {
 		border-color: green;
 	}
 
-	.dropDenied label:before {
+	.dropDenied.root:before {
 		border-color: red;
 	}
 
 	.notice {
-		visibility: hidden;
-
-		position: absolute;
-		top: 50%;
-		left: 50%;
-		width: 100%;
-		height: 100%;
 		font-weight: bold;
 		font-size: 250%;
-		margin: -0.7em 0 0 -0.4em;
-		transition: opacity 1s;
 	}
 
 	.uploadSuccess .notice,
 	.uploadFailure .notice {
-		visibility: visible;
-		opacity: 0;
+		animation-duration: 1s;
+		animation-name: notice;
 	}
 	
 	.uploadSuccess .notice:before {
@@ -84,6 +94,8 @@
 		color: red;
 		content: '\2717';
 	}
+	
+	
 	
 	.progressBar {
 		position: absolute;
@@ -214,7 +226,7 @@ module.exports = {
 	methods: {
 		tickNext: function() {
 
-			setTimeout(function() {
+			window.setTimeout(function() {
 			
 				this.tick++;
 			}.bind(this), 250);
@@ -226,7 +238,7 @@ module.exports = {
 			var feedback = function(success) {
 			
 				this.uploadState = success ? 'uploadSuccess' : 'uploadFailure';
-				setTimeout(function() {
+				window.setTimeout(function() {
 				
 					this.uploadState = '';
 				}.bind(this), 1000);
@@ -410,7 +422,7 @@ module.exports = {
 			for ( var i = 0; i < this.uploads.length; ++i )
 				if ( this.uploads[i].ifr === name )
 					this.uploads[i].free();
-				
+
 			this.uploaded(undefined, iframeWin !== null ? iframeWin.document.documentElement.innerText : '');
 		},
 		
