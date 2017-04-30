@@ -3,9 +3,9 @@
 		<form :target="uploads.length && uploads[0].ifr" :action="url" method="post" enctype="multipart/form-data">
 			<input :id="'inp'+_uid" name="file" type="file" :accept="image ? 'image/*' : undefined" :capture="capture" @change="onchange" :multiple="multiple">
 		</form>
-	 	<iframe v-for="item in uploads" v-if="item.ifr" :key="item.ifr" :name="item.ifr" src="about:blank" @load="onload($event.target, item.ifr)"></iframe>
-	 	<div v-if="$slots.default" class="slot"><slot></slot></div>
-	 	<div class="notice"></div>
+		<iframe v-for="item in uploads" v-if="item.ifr" :key="item.ifr" :name="item.ifr" src="about:blank" @load="onload($event.target, item.ifr)"></iframe>
+		<div v-if="$slots.default" class="slot"><slot></slot></div>
+		<div class="notice"></div>
 		<label :for="!uploads.length || multiple ? 'inp'+_uid : ''" @dragenter.prevent.stop="enter" @dragleave.prevent.stop="leave" @dragover.prevent.stop="over" @drop.prevent.stop="drop" :title="uploadInfo"></label>
 		<div v-show="uploads.length" class="progressBar">
 			<div class="progress" :style="progressStyle"></div>
