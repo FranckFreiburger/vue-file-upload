@@ -1,10 +1,24 @@
 {
-  "name": "vue-upload",
+  "name": "vue-file-upload",
   "version": "1.0.0",
-  "description": "file uploader",
+  "description": "file upload widget",
   "main": "src/upload.vue",
   "scripts": {
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FranckFreiburger/vue-file-upload.git"
+  },
+  "keywords": [
+    "vue2",
+    "html5",
+    "file",
+    "upload"
+  ],
   "author": "Franck FREIBURGER",
-  "license": "MIT"
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/FranckFreiburger/vue-file-upload/issues"
+  },
+  "homepage": "https://github.com/FranckFreiburger/vue-file-upload#readme"
 }
