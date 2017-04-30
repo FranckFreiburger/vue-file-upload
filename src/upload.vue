@@ -89,6 +89,7 @@
 		animation-duration: 1s;
 		animation-fill-mode: forwards;
 		animation-name: notice;
+		text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff;
 	}
 	
 	.uploadSuccess .notice:before {
