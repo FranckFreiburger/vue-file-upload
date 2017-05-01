@@ -2,6 +2,7 @@
 	<div class="root" :class="[dropState, uploadState]">
 		<form :target="uploads.length && uploads[0].ifr" :action="url" method="post" enctype="multipart/form-data">
 			<input :id="'inp'+_uid" name="file" type="file" :accept="image ? 'image/*' : undefined" :capture="capture" @change="onchange" :multiple="multiple">
+			<input v-if="!hasFileAPI && data !== undefined" type="hidden" name="data" :value="data">
 		</form>
 		<iframe v-for="item in uploads" v-if="item.ifr" :key="item.ifr" :name="item.ifr" src="about:blank" @load="onload($event.target, item.ifr)"></iframe>
 		<div v-if="$slots.default" class="slot"><slot></slot></div>
@@ -86,9 +87,7 @@
 
 	.uploadSuccess .notice,
 	.uploadFailure .notice {
-		animation-duration: 1s;
-		animation-fill-mode: forwards;
-		animation-name: notice;
+		animation: notice 1s ease-in forwards;
 		text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff;
 	}
 	
@@ -140,7 +139,7 @@
 
 var hasFileAPI = window.FileReader && window.FormData;
 
-//hasFileAPI = false
+// hasFileAPI = false
 
 function isIFrameWindow(iframeElt) {
 	
@@ -185,10 +184,14 @@ module.exports = {
 		done: {
 			type: Function,
 			default: function(status, responseText, feedback) { status !== undefined && feedback(status >= 200 && status < 400) },
+		},
+		data: {
+			type: String,
 		}
 	},
 	data: function() {
 		return {
+			hasFileAPI: hasFileAPI,
 			dropState: '',
 			uploadState: '',
 			uploads: [],
@@ -287,13 +290,17 @@ module.exports = {
 			}.bind(this);
 			xhr.open('POST', this.url, true);
 			
-			var fd = new FormData();
+			var fd = new FormData;
 			for ( var i = 0; i < files.length; ++i ) {
 				
 				info.filenameList.push(files[i].name);
 				this.total += files[i].size;
 				fd.append('file', files[i]);
 			}
+			
+			if ( 'data' in this )
+				fd.append('data', this.data);
+			
 			xhr.send(fd);
 		},
 		enter: function(ev) {
