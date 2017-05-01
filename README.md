@@ -34,26 +34,26 @@ npm install --save @franck.freiburger/vue-file-upload
 
 #### :url <sup>string<sup>
 
-Target url for the uploaded files.
+Target url for the uploaded files (post multipart/form-data).
 
 
-#### :multiple <sup>boolean - default: false<sup>
+#### :multiple <sup>boolean, default: false<sup>
 
 Allow multiple files to be uploaded simultaneously.
 
 
-#### :image <sup>boolean - default: false<sup>
+#### :image <sup>boolean, default: false<sup>
 
 Indicate that you wish to upload images.
 
 
-#### :capture <sup>boolean - default: false<sup>
+#### :capture <sup>boolean, default: false<sup>
 
 Indicates that the capture of media directly from the device's environment using a media capture mechanism is preferred.
 See [capture attribute](https://www.w3.org/TR/html-media-capture/#the-capture-attribute)
 
 
-#### :accept <sup>function(filename) return: boolean<sup>
+#### :accept <sup>boolean function(filename)<sup>
 
 Called before a file is about to be uploaded. Return `false` to reject the upload, otherwise return `true`.
 
@@ -75,7 +75,7 @@ By default, if the property is not defined, a positive feedback is send for HTTP
 
 #### :data <sup>string<sup>
 
-Extra data sent with files.
+Extra data sent with files (name=data).
 
 
 ### Slots
