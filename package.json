@@ -1,10 +1,9 @@
 {
   "name": "@franck.freiburger/vue-file-upload",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "file upload widget",
   "main": "src/upload.vue",
-  "scripts": {
-  },
+  "scripts": {},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/FranckFreiburger/vue-file-upload.git"
