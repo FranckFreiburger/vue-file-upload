@@ -372,7 +372,7 @@ module.exports = {
 				this.$nextTick(function() {
 
 					if ( ev.target.htmlFor )
-						document.getElementById(ev.target.htmlFor).click();
+						window.document.getElementById(ev.target.htmlFor).click();
 				});
 			}
 		},
@@ -406,9 +406,7 @@ module.exports = {
 					ifr: name,
 					free: function() {
 						
-						var ifrElt = this.$el.ownerDocument.getElementById(name);
-						if ( ifrElt !== null )
-							ifrElt.src = "about:blank";
+						window.document.getElementById(name).src = "about:blank";
 
 						for ( var i = 0; i < this.uploads.length; ++i )
 							if ( this.uploads[i].ifr === name )
