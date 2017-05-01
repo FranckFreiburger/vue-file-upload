@@ -7,6 +7,8 @@ File upload component
 * overall progress bar
 * no dependency
 
+![demo](https://cloud.githubusercontent.com/assets/25509586/25576519/15bbca56-2e60-11e7-84ac-691f5be31de4.gif)
+
 
 ## Browser support
 Same browser support as [Vue.js 2](https://github.com/vuejs/vue/blob/dev/README.md)
@@ -62,7 +64,7 @@ Called before a file is about to be uploaded. Return `false` to reject the uploa
 
 Called when a file or a set of files has been uploaded.
 
-`status`: HTTP status of the upload or `undefined' if no status is available (IE9).
+`status`: HTTP status of the upload or `undefined` if no status is available (IE9).
 `responseText`: reponse of the server.
 `feedback`: function you can call to give a positive or negative (`true`/`false`) UI feedback about the upload.
 
