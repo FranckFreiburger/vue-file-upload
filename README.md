@@ -59,6 +59,8 @@ Called before a file is about to be uploaded. Return `false` to reject the uploa
 
 `filename`: The filename (without path) of the file.
 
+ By default any file is accepted.
+
 
 #### :done <sup>function(status, responseText, feedback)<sup>
 
