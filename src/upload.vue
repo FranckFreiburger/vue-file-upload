@@ -4,14 +4,14 @@
 			<input :id="'inp'+_uid" name="file" type="file" :accept="image ? 'image/*' : undefined" :capture="capture" @change="onchange" :multiple="multiple">
 			<input v-if="!hasFileAPI && data !== undefined" type="hidden" name="data" :value="data">
 		</form>
-		<iframe v-for="item in uploads" v-if="item.ifr" :key="item.ifr" :name="item.ifr" src="about:blank" @load="onload($event.target, item.ifr)"></iframe>
+		<iframe v-for="item in uploads" v-if="item.ifr" :key="item.ifr" :name="item.ifr" :id="item.ifr" src="about:blank" @load="onload($event.target, item.ifr)"></iframe>
 		<div v-if="$slots.default" class="slot"><slot></slot></div>
 		<div class="notice"></div>
-		<label :for="!uploads.length || multiple ? 'inp'+_uid : ''" @dragenter.prevent.stop="enter" @dragleave.prevent.stop="leave" @dragover.prevent.stop="over" @drop.prevent.stop="drop" :title="uploadInfo"></label>
 		<div v-show="uploads.length" class="progressBar">
 			<div class="progress" :style="progressStyle"></div>
 			<a href="#" class="cancel" @click.prevent="free"></a>
 		</div>
+		<label :for="!uploads.length || multiple ? 'inp'+_uid : ''" @dragenter.prevent.stop="enter" @dragleave.prevent.stop="leave" @dragover.prevent.stop="over" @drop.prevent.stop="drop" :title="uploadInfo"></label>
 	</div>
 </template>
 <style scoped>
@@ -117,6 +117,7 @@
 	
 	.cancel {
 		position: absolute;
+		z-index: 1;
 		top: 50%;
 		margin-top: -0.6em;
 		height: 100%;
@@ -404,7 +405,11 @@ module.exports = {
 				this.uploads.unshift({
 					ifr: name,
 					free: function() {
-			
+						
+						var ifrElt = this.$el.ownerDocument.getElementById(name);
+						if ( ifrElt !== null )
+							ifrElt.src = "about:blank";
+
 						for ( var i = 0; i < this.uploads.length; ++i )
 							if ( this.uploads[i].ifr === name )
 								this.uploads.splice(i, 1);
