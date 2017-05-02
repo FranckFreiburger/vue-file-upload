@@ -4,7 +4,7 @@
 			<input :id="'inp'+_uid" name="file" type="file" :accept="image ? 'image/*' : undefined" :capture="capture" @change="onchange" :multiple="multiple">
 			<input v-if="!hasFileAPI && data !== undefined" type="hidden" name="data" :value="data">
 		</form>
-		<iframe v-for="item in uploads" v-if="item.ifr" :key="item.ifr" :name="item.ifr" :id="item.ifr" src="about:blank" @load="onload($event.target, item.ifr)"></iframe>
+		<iframe v-for="item in uploads" v-if="item.ifr" :key="item.ifr" :name="item.ifr" src="about:blank" @load="onload($event.target, item.ifr)"></iframe>
 		<div v-if="$slots.default" class="slot"><slot></slot></div>
 		<div class="notice"></div>
 		<div v-show="uploads.length" class="progressBar">
@@ -256,7 +256,7 @@ module.exports = {
 			
 			this.done(status, responseText, feedback);
 		},
-		uploadFile: function(files) {
+		uploadFiles: function(files) {
 			
 			var xhr = new XMLHttpRequest();
 
@@ -289,7 +289,6 @@ module.exports = {
 				info.free();
 				this.uploaded(xhr.status, xhr.responseText);
 			}.bind(this);
-			xhr.open('POST', this.url, true);
 			
 			var fd = new FormData;
 			for ( var i = 0; i < files.length; ++i ) {
@@ -302,6 +301,7 @@ module.exports = {
 			if ( 'data' in this )
 				fd.append('data', this.data);
 			
+			xhr.open('POST', this.url, true);
 			xhr.send(fd);
 		},
 		enter: function(ev) {
@@ -354,18 +354,12 @@ module.exports = {
 					return !this.accept(file.name);
 				}.bind(this));
 				
-				if ( !acceptFiles ) {
-					
-					this.dropState = 'dropDenied';
-					return;
-				}
-				
-				if ( ev.dataTransfer.files.length === 0 || ev.dataTransfer.files.length > 1 && !this.multiple ) {
+				if ( !acceptFiles || ev.dataTransfer.files.length === 0 || ev.dataTransfer.files.length > 1 && !this.multiple ) {
 				
 					this.dropState = 'dropDenied';
 				} else {
 					
-					this.uploadFile(ev.dataTransfer.files);
+					this.uploadFiles(ev.dataTransfer.files);
 				}
 			} else {
 			
@@ -381,7 +375,7 @@ module.exports = {
 			var formElt = ev.target.form;
 			if ( hasFileAPI && 'files' in ev.target ) {
 				
-				this.uploadFile(ev.target.files);
+				this.uploadFiles(ev.target.files);
 				formElt.reset();
 			} else {
 				
@@ -406,7 +400,7 @@ module.exports = {
 					ifr: name,
 					free: function() {
 						
-						window.document.getElementById(name).src = "about:blank";
+						window.document.getElementsByName(name)[0].src = "about:blank";
 
 						for ( var i = 0; i < this.uploads.length; ++i )
 							if ( this.uploads[i].ifr === name )
