@@ -73,9 +73,9 @@ Called when a file or a set of files has been uploaded.
 By default, if the property is not defined, a positive feedback is send for HTTP status 2xx and 3xx
 
 
-#### :data <sup>string<sup>
+#### :data <sup>object<sup>
 
-Extra data sent with files (name=data).
+Extra data sent with the files.
 
 
 ### Slots
