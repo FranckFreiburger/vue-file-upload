@@ -1,8 +1,10 @@
 <template>
 	<div class="root" :class="[dropState, uploadState]">
 		<form :target="uploads.length && uploads[0].ifr" :action="url" method="post" enctype="multipart/form-data">
+			<template v-if="!hasFileAPI && data !== undefined">
+				<input v-for="(value, name) in data" type="hidden" :name="name" :value="value">
+			</template>
 			<input :id="'inp'+_uid" name="file" type="file" :accept="image ? 'image/*' : undefined" :capture="capture" @change="onchange" :multiple="multiple">
-			<input v-if="!hasFileAPI && data !== undefined" type="hidden" name="data" :value="data">
 		</form>
 		<iframe v-for="item in uploads" v-if="item.ifr" :key="item.ifr" :name="item.ifr" src="about:blank" @load="onload($event.target, item.ifr)"></iframe>
 		<div v-if="$slots.default" class="slot"><slot></slot></div>
@@ -187,7 +189,7 @@ module.exports = {
 			default: function(status, responseText, feedback) { status !== undefined && feedback(status >= 200 && status < 400) },
 		},
 		data: {
-			type: String,
+			type: Object,
 		}
 	},
 	data: function() {
@@ -291,15 +293,17 @@ module.exports = {
 			}.bind(this);
 			
 			var fd = new FormData;
+
+			if ( 'data' in this )
+				for ( var name in this.data )
+					fd.append(name, this.data[name]);
+
 			for ( var i = 0; i < files.length; ++i ) {
 				
 				info.filenameList.push(files[i].name);
 				this.total += files[i].size;
 				fd.append('file', files[i]);
 			}
-			
-			if ( 'data' in this )
-				fd.append('data', this.data);
 			
 			xhr.open('POST', this.url, true);
 			xhr.send(fd);
